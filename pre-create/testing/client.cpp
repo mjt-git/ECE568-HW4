@@ -1,5 +1,5 @@
-#include "Server.hpp"
-#include "Client.hpp"
+#include "../Server.hpp"
+#include "../Client.hpp"
 #include <vector>
 #include <string>
 #include <sstream>
@@ -19,28 +19,31 @@ int reqCount = 0;
 mutex mtx;
 
 void thread_func(string ip, string port, int threadId) {
-  while(true) {
+  while (true) {
     try {
       Client clients;
       clients.build_client(ip, port);
       int socket_fd = clients.get_socket();
-      // cout<<"please input the delay count & the bucket number:"<<endl;
-      int delayCount = rand() % 20 + 1;
-      int bucketIdx = rand() % 32;
+      int delayCount = rand() % 3 + 1;    // delay time
+      int bucketIdx = rand() % 512;         // bucket size
       string message = to_string(delayCount) + "," + to_string(bucketIdx);
-      //  getline(cin,message);
-      send(socket_fd,message.c_str(),message.size(),0);
-      int update_val=0;
-      recv(socket_fd,&update_val,sizeof(update_val),MSG_WAITALL);
+
+      //      cout << "THREAD ID: " << threadId << " SEND: " << message << endl;
+
+      send(socket_fd, message.c_str(), message.size(), 0);
+      int update_val = 0;
+      recv(socket_fd, &update_val, sizeof(update_val), MSG_WAITALL);
       mtx.lock();
       reqCount++;
       mtx.unlock();
+
+      
       stringstream ss;
-      ss<<"the new value of bucket is "<<update_val << " threadID: " << threadId;
-      if(update_val != 0) {
-	cout<<ss.str()<<endl;
-      }
-      close(socket_fd);
+      ss << "the new value of bucket is " << update_val << " threadID: " << threadId;
+      if (update_val != 0) {
+        cout << ss.str() << endl;
+	}  
+      //      close(socket_fd);
     } catch (exception & exp) {
       cout << "INSIDE CATCH" << endl;
       break;
@@ -48,9 +51,9 @@ void thread_func(string ip, string port, int threadId) {
   }
 }
 
-int main(int argc, char * argv[]){
-  if(argc!=3){
-    cout<<"wrong argument number!"<<endl;
+int main(int argc, char * argv[]) {
+  if (argc != 3) {
+    cout << "wrong argument number!" << endl;
   }
   /*
   int threadId = 0;
@@ -59,16 +62,16 @@ int main(int argc, char * argv[]){
     threadPool.push_back(thread(thread_func, argv[1], argv[2], threadId));
     //  newThread.detach();
     threadId++;
-    }   */ 
- 
+    }   */
+
   // create many threads to connect server
-  
-  int threadNum = 3;
+
+  int threadNum = 1000;
   vector<thread> threadPool;
-  for(int i = 0; i < threadNum; i++) {
+  for (int i = 0; i < threadNum; i++) {
     threadPool.push_back(thread(thread_func, argv[1], argv[2], i));
-  }  
-  for(int i = 0; i < threadPool.size(); i++) {
+  }
+  for (int i = 0; i < threadPool.size(); i++) {
     threadPool[i].join();
   }
   cout << "*****************\n\n" << endl;
